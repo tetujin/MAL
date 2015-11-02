@@ -25,7 +25,7 @@
 
 
 /**
- * 自動ログインの設定メソッド
+ * Auto Login
  */
 - (void)enableLoginItem
 {

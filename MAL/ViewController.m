@@ -11,41 +11,53 @@
 @implementation ViewController
 
 @synthesize loggingEnabled;
-
 @synthesize keyPressCounter;
 @synthesize leftMouseCounter;
 @synthesize rightMouseCounter;
 
-/** 操作ログを保存するファイル名*/
+/** File name of PC's ON/OFF state history */
 NSString *logFile;
 
-/** 操作ログの送信先URL*/
+/** File name of current active application's history */
+NSString *activeAppLogFile;
+
+/** File name of keybord action history */
+NSString *keybordActionLogFile;
+
+/** File name of mouse action history */
+NSString *mouseActionLogFile;
+
+/** Server URL for uploading each hitory */
 NSString *serverURL;
 
-/** ローカルストレージのキー（UUID） */
+/** Local storage key (UUID) */
 NSString *uuidKey;
 
-/** ローカルストレージのキー（ユーザ名）*/
+/** Local storage key (User Name) */
 NSString *userNameKey;
 
-/** 操作中から操作中止（またはその逆）のインターバル（秒）*/
+/** Previous application name */
+NSString *pastActiveApp;
+
+/** Previous mouse location */
+NSPoint pastMouseLocation;
+
+/** Interval (sec.) of PC's state (Active or Unactive) */
 double changeStateInterval;
 
-/** 操作ログを送信する間隔（秒） */
+/** Interval (sec.) for uploading each history */
 double sendActionLogInterval;
 
-/** 最新の操作時刻（unixtime） */
+/** Latest active timestamp（unixtime） */
 double lastUpdateTime;
 
-/** 現在のユーザの操作状態（boolean） */
+/** current PC's statement（boolean） */
 bool userActiveState;
-
-/** ユーザの状態をこ */
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     /**
-     * ここは初期化処理
+     * initialization
      */
     userActiveState = true;
     lastUpdateTime = [self getCurrentUnixtime];
@@ -54,18 +66,33 @@ bool userActiveState;
     changeStateInterval = 5.0f;
     sendActionLogInterval = 1.0f * 10.0f;
     logFile = @".mal.log";
-    serverURL = @"http://epiwork.hcii.cs.cmu.edu/~tokoshi/Attelia/server201501/index.cgi/upload_usage_data/";
+    activeAppLogFile = @".mal.app.log";
+    keybordActionLogFile = @".mal.key.log";
+    mouseActionLogFile = @".mal.mouse.log";
+    serverURL = @"http://www.ht.sfc.keio.ac.jp/~tetujin/";
+    pastActiveApp = @"";
+    pastMouseLocation = [NSEvent mouseLocation];
     [self startMonitoring];
-    /** 定期的にログを送信する設定 */
-    [NSTimer scheduledTimerWithTimeInterval:sendActionLogInterval
-                                     target:self
-                                   selector:@selector(postValue)
-                                   userInfo:nil
-                                    repeats:YES];
-    /** 定期的にユーザの使用状態を調査する設定 */
-    [NSTimer scheduledTimerWithTimeInterval:0.1f
+    /** Configuring Periodic upload */
+//    [NSTimer scheduledTimerWithTimeInterval:sendActionLogInterval
+//                                     target:self
+//                                   selector:@selector(postValue)
+//                                   userInfo:nil
+//                                    repeats:YES];
+    /** Configuring periodic user condition detection */
+    [NSTimer scheduledTimerWithTimeInterval:5
                                      target:self
                                    selector:@selector(checkUserState)
+                                   userInfo:nil
+                                    repeats:YES];
+    [NSTimer scheduledTimerWithTimeInterval:1
+                                     target:self
+                                   selector:@selector(checkActiveApplication)
+                                   userInfo:nil
+                                    repeats:YES];
+    [NSTimer scheduledTimerWithTimeInterval:0.1f
+                                     target:self
+                                   selector:@selector(getMouseLocation)
                                    userInfo:nil
                                     repeats:YES];
     self.keyPressCounter = [NSNumber numberWithInt:0];
@@ -75,82 +102,11 @@ bool userActiveState;
     if(userName.length != 0){
         [self.userNameField setStringValue:[self getUserName]];
     }
-    [self showLog];
-    [self getCurrentActiveApplication];
-    //[self getActiveApplicationFromMenubar];
 }
 
-- (void) getCurrentActiveApplication
-{
-    NSWorkspace* ws = [NSWorkspace sharedWorkspace];
-    NSLog(@"%@", [ws activeApplication]);
-}
-
-
-- (void) getActiveApplicationFromMenubar
-{
-    NSWorkspace* ws = [NSWorkspace sharedWorkspace];
-    NSLog(@"%@", [ws launchedApplications]);
-}
-
-
-- (void) showLog
-{
-    // 自分自身のプロセス
-    ProcessSerialNumber ourPSN;
-    GetCurrentProcess(&ourPSN);
-    
-    // 起動中のプロセスを一覧
-    ProcessSerialNumber nextPSN = {kNoProcess, kNoProcess}; // 初期化
-    while (GetNextProcess(&nextPSN) == noErr)
-    {
-        Boolean processIsUs = false;
-        SameProcess(&ourPSN, &nextPSN, &processIsUs);
-        if (processIsUs)
-        {
-            // 自分自身のプロセス
-        }
-        else
-        {
-            CFDictionaryRef info;
-            info = ProcessInformationCopyDictionary(&nextPSN, kProcessDictionaryIncludeAllInformationMask);
-            if (info)
-            {
-//                NSLog(@"PSN:%@", CFDictionaryGetValue(info, CFSTR("PSN")));
-//                NSLog(@"Flavor:%@", CFDictionaryGetValue(info, CFSTR("Flavor")));
-//                NSLog(@"Attributes:%@", CFDictionaryGetValue(info, CFSTR("Attributes")));
-//                NSLog(@"ParentPSN:%@", CFDictionaryGetValue(info, CFSTR("ParentPSN")));
-//                NSLog(@"FileType:%@", CFDictionaryGetValue(info, CFSTR("FileType")));
-//                NSLog(@"FileCreator:%@", CFDictionaryGetValue(info, CFSTR("FileCreator")));
-//                NSLog(@"pid:%@", CFDictionaryGetValue(info, CFSTR("pid")));
-//                NSLog(@"LSBackgroundOnly:%@", CFDictionaryGetValue(info, CFSTR("LSBackgroundOnly")));
-//                NSLog(@"LSUIElement:%@", CFDictionaryGetValue(info, CFSTR("LSUIElement")));
-//                NSLog(@"IsHiddenAttr:%@", CFDictionaryGetValue(info, CFSTR("IsHiddenAttr")));
-//                NSLog(@"IsCheckedInAttr:%@", CFDictionaryGetValue(info, CFSTR("IsCheckedInAttr")));
-//                NSLog(@"RequiresCarbon:%@", CFDictionaryGetValue(info, CFSTR("RequiresCarbon")));
-//                NSLog(@"LSUserQuitOnly:%@", CFDictionaryGetValue(info, CFSTR("LSUserQuitOnly")));
-//                NSLog(@"LSUIPresentationMode:%@", CFDictionaryGetValue(info, CFSTR("LSUIPresentationMode")));
-//                NSLog(@"BundlePath:%@", CFDictionaryGetValue(info, CFSTR("BundlePath")));
-//                NSLog(@"kCFBundleExecutableKey:%@", CFDictionaryGetValue(info, kCFBundleExecutableKey));
-//                NSLog(@"kCFBundleNameKey:%@", CFDictionaryGetValue(info, kCFBundleNameKey));
-//                NSLog(@"kCFBundleIdentifierKey:%@", CFDictionaryGetValue(info, kCFBundleIdentifierKey));
-                CFRelease(info);
-            }
-            
-            // ローカライズされたプロセス名が取得できる
-            CFStringRef name;
-            if (CopyProcessName(&nextPSN, &name) == noErr)
-            {
-                NSLog(@"name:%@", name);
-                CFRelease(name);
-            }
-        }
-    }
-}
 
 - (void)setRepresentedObject:(id)representedObject {
     [super setRepresentedObject:representedObject];
-    // Update the view, if already loaded.
 }
 
 
@@ -159,60 +115,22 @@ bool userActiveState;
 }
 
 
-/**
- * 値をHTTP/POSTを用いて送信するメソッド
- */
-- (void)postValue
+- (void) checkActiveApplication
 {
-    //NSOperationQueueを使ってマルチスレッドでリクエスト
-    NSOperationQueue *queue = [[NSOperationQueue alloc] init];
-    [queue addOperationWithBlock:^{
-        //////////////////////////////////////
-        //リクエスト用のパラメータを設定
-        NSString *param = [NSString stringWithFormat:@"username=%@&devicename=%@&timestamp=%f&usage=%@",
-                                                        [self getUserName],
-                                                        [self getUUID],
-                                                        [self getCurrentUnixtime],
-                                                        [self getLogStr]];
-        //リクエストを生成
-        NSMutableURLRequest *request;
-        request = [[NSMutableURLRequest alloc] init];
-        [request setHTTPMethod:@"POST"];
-        [request setURL:[NSURL URLWithString:serverURL]];
-        [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
-        [request setTimeoutInterval:8];
-        [request setHTTPShouldHandleCookies:FALSE];
-        [request setHTTPBody:[param dataUsingEncoding:NSUTF8StringEncoding]];
-        NSLog(@"%@", param);
-        
-        //同期通信で送信
-        NSURLResponse *response = nil;
-        NSError *error = nil;
-        NSData *result = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
-        NSHTTPURLResponse *res = (NSHTTPURLResponse *)response;
-        if (error != nil) {
-            NSLog(@"Error!");
-            return;
-        }else{
-
-        }
-        
-        /**
-         * 送信が成功した場合は、ログファイルをクリアする
-         */
-        if ( [res statusCode] == 200 ){
-            [self clearLogFile];
-            NSLog(@"complate");
-            [self addDebugMessageField:@"[complate] posted log to slash's server\n"];
-        }else{
-            NSLog(@"error");
-            [self addDebugMessageField:@"[error] MAL could not post log to slash's server !!!! Please check your internet connection!\n"];
-        }
-    }];
+    NSWorkspace* ws = [NSWorkspace sharedWorkspace];
+    NSString *currentActiveApp = [[ws activeApplication] objectForKey:@"NSApplicationName"];
+    if (![currentActiveApp isEqualToString:pastActiveApp]) {
+        double now = [self getCurrentUnixtime];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f,%@\n", now, currentActiveApp]
+                 targetFile:activeAppLogFile];
+        NSLog(@"%@", currentActiveApp );
+        pastActiveApp = currentActiveApp;
+    }
 }
 
+
 /**
- * ユーザの操作状態をチェックするメソッド
+ * Check user state
  */
 - (void) checkUserState
 {
@@ -221,23 +139,22 @@ bool userActiveState;
     if(gap > changeStateInterval){
         if(userActiveState != NO){
             userActiveState = NO;
-            [self saveLogToFile:[NSString stringWithFormat:@"%d,off\n",(int)now]];
+            [self saveLogToFile:[NSString stringWithFormat:@"%d,off\n",(int)now]
+             targetFile:logFile];
             NSLog(@"off");
         }
     }else{
         if(userActiveState != YES){
             userActiveState = YES;
-            [self saveLogToFile:[NSString stringWithFormat:@"%d,on\n",(int)now]];
+            [self saveLogToFile:[NSString stringWithFormat:@"%d,on\n",(int)now]
+                targetFile:logFile];
             NSLog(@"on");
         }
     }
 }
 
-
-
-
 /**
- * キーとマウスのモニタリングを開始するメソッド
+ * start monitoring the mouse and key action
  */
 - (void) startMonitoring
 {
@@ -245,44 +162,64 @@ bool userActiveState;
     monitorKeyDown = [NSEvent addGlobalMonitorForEventsMatchingMask:NSKeyDownMask handler:^(NSEvent *evt) {
 //        [self logMessageToLogView:[NSString stringWithFormat:@"Key down: %@ (key code %d)", [evt characters], [evt keyCode]]];
         self.keyPressCounter = [NSNumber numberWithInt:(1 + [self.keyPressCounter intValue])];
-        //[self saveLogToFile:[NSString stringWithFormat:@"%d", [evt keyCode]]];
         lastUpdateTime = [self getCurrentUnixtime];
+        [self saveLogToFile:[NSString stringWithFormat:@"%d\n", [evt keyCode]] targetFile:keybordActionLogFile];
     }];
     monitorLeftMouseDown = [NSEvent addGlobalMonitorForEventsMatchingMask:NSLeftMouseDownMask handler:^(NSEvent *evt) {
         //[self logMessageToLogView:[NSString stringWithFormat:@"Left mouse down!"]];
         self.leftMouseCounter = [NSNumber numberWithInt:(1 + [self.leftMouseCounter intValue])];
         lastUpdateTime = [self getCurrentUnixtime];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f,Left Mouse Down\n", [self getCurrentUnixtime]] targetFile:mouseActionLogFile];
+        
     }];
     monitorRightMouseDown = [NSEvent addGlobalMonitorForEventsMatchingMask:NSRightMouseDownMask handler:^(NSEvent *evt) {
         //[self logMessageToLogView:@"Right mouse down!"];
         self.rightMouseCounter = [NSNumber numberWithInt:(1 + [self.rightMouseCounter intValue])];
         lastUpdateTime = [self getCurrentUnixtime];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f,Right Mouse Down\n", [self getCurrentUnixtime]] targetFile:mouseActionLogFile];
     }];
 }
 
 
+- (NSPoint) getMouseLocation
+{
+    NSPoint mouseLocation = [NSEvent mouseLocation];
+    if (!NSEqualPoints(pastMouseLocation, mouseLocation)) {
+        double now = [self getCurrentUnixtime];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f,%d,%d \n", now, (int)mouseLocation.x, (int)mouseLocation.y]
+                 targetFile:mouseActionLogFile];
+    }
+    pastMouseLocation = mouseLocation;
+    return mouseLocation;
+}
+
+
+
 /**
- * ログファイルにメッセージを保存するメソッド
+ * ================================
+ *  Control methods of log file
+ * ================================
+ */
+
+/**
+ * Save history to the log file
  */
 - (void) saveLogToFile:(NSString *)data
+            targetFile:(NSString *)filePath
 {
-    NSFileHandle *fileHandle = [self getFileHandle:logFile];
-    // ファイルに書き込むデータ1を作成
-    NSString *line = [NSString stringWithFormat:@"%@", data];
-    NSData *lineData = [NSData dataWithBytes:line.UTF8String
-                                   length:line.length];
-    // ファイルに書き込む
+    NSFileHandle *fileHandle = [self getFileHandle:filePath];
+    NSData *lineData = [NSData dataWithBytes:data.UTF8String
+                                      length:[data lengthOfBytesUsingEncoding:NSUTF8StringEncoding]];
     [fileHandle seekToEndOfFile];
     [fileHandle writeData:lineData];
     [fileHandle synchronizeFile];
     [fileHandle closeFile];
     
-    //[self.logTextField setString:data];
     [self addDebugMessageField:data];
 }
 
 /**
- * ログファイルの中身をクリアするメソッド
+ * Clear log file from
  */
 - (void) clearLogFile
 {
@@ -296,7 +233,7 @@ bool userActiveState;
 
 
 /**
- * ログファイルの中身を取得するメソッド
+ * Get logs from log-file
  */
 - (NSString *) getLogStr
 {
@@ -311,29 +248,29 @@ bool userActiveState;
 
 
 /**
- * ログファイルのハンドラを取得するメソッド
+ * Handling method for log-files
  */
 - (NSFileHandle *) getFileHandle:(NSString *) fileName
 {
-    // ホームディレクトリを取得
+    // Get a home direcotry's path
     NSString *homeDir = NSHomeDirectory();
-    // 書き込みたいファイルのパスを作成
+    // Generate a file path for a log file
     NSString *filePath = [homeDir stringByAppendingPathComponent:fileName];
-    // ファイルマネージャを作成
+    // Generate a file manager
     NSFileManager *fileManager = [NSFileManager defaultManager];
     if (![fileManager fileExistsAtPath:filePath]) { // yes
-        // 空のファイルを作成する
+        // Generate null file based on the file path
         BOOL result = [fileManager createFileAtPath:filePath
                                            contents:[NSData data] attributes:nil];
         if (!result) {
-            NSLog(@"ファイルの作成に失敗");
+            NSLog(@"Failed to create the file");
             return nil;
         }
     }
-    // ファイルハンドルを作成する
+    // Make a file handler
     NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:filePath];
     if (!fileHandle) {
-        NSLog(@"ファイルハンドルの作成に失敗");
+        NSLog(@"Fails to create the file handle");
         return nil;
     }
     return fileHandle;
@@ -341,7 +278,67 @@ bool userActiveState;
 
 
 /**
- * 「set」ボタンが押された場合に、ユーザ名を設定するメソッド
+ * ================================
+ *  HTTP request method
+ * ================================
+ */
+- (void)postValue
+{
+    //Multi-thread HTTP request by using NSOperationQueue
+    NSOperationQueue *queue = [[NSOperationQueue alloc] init];
+    [queue addOperationWithBlock:^{
+        //Set request parameters
+        NSString *param = [NSString stringWithFormat:@"username=%@&devicename=%@&timestamp=%f&usage=%@",
+                           [self getUserName],
+                           [self getUUID],
+                           [self getCurrentUnixtime],
+                           [self getLogStr]];
+        //Generate request
+        NSMutableURLRequest *request;
+        request = [[NSMutableURLRequest alloc] init];
+        [request setHTTPMethod:@"POST"];
+        [request setURL:[NSURL URLWithString:serverURL]];
+        [request setCachePolicy:NSURLRequestReloadIgnoringLocalCacheData];
+        [request setTimeoutInterval:8];
+        [request setHTTPShouldHandleCookies:FALSE];
+        [request setHTTPBody:[param dataUsingEncoding:NSUTF8StringEncoding]];
+        NSLog(@"%@", param);
+        
+        //Send HTTP request
+        NSURLResponse *response = nil;
+        NSError *error = nil;
+        NSData *result = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
+        NSHTTPURLResponse *res = (NSHTTPURLResponse *)response;
+        if (error != nil) {
+            NSLog(@"Error!");
+            return;
+        }else{
+            
+        }
+        
+        /**
+         * When uploade is success, the following code will clear the log file.
+         */
+        if ( [res statusCode] == 200 ){
+            [self clearLogFile];
+            NSLog(@"complate");
+            [self addDebugMessageField:@"[complate] posted log to slash's server\n"];
+        }else{
+            NSLog(@"error");
+            [self addDebugMessageField:@"[error] MAL could not post log to slash's server !!!! Please check your internet connection!\n"];
+        }
+    }];
+}
+
+
+/**
+ * ========================================
+ * Following methods handle user information
+ * ========================================
+ */
+
+/**
+ *  When "SET" button will be pushed, this method sets a user name
  */
 - (IBAction)pushedSetNameButton:(id)sender {
     //userName = [self.userNameField stringValue];
@@ -349,7 +346,7 @@ bool userActiveState;
 }
 
 /**
- * ユーザ名の取得
+ * Get an User Name
  */
 - (NSString *) getUserName
 {
@@ -360,7 +357,7 @@ bool userActiveState;
 }
 
 /**
- * ユーザ名の設定
+ * Set an User Name
  */
 - (void) setUserName:(NSString *) userName
 {
@@ -370,7 +367,7 @@ bool userActiveState;
 
 
 /**
- * UUIDの取得
+ * Get UUID
  */
 - (NSString *) getUUID
 {
@@ -388,7 +385,7 @@ bool userActiveState;
 }
 
 /**
- * 現在時刻（unixtime）の取得
+ * Get current time (unixtime)
  */
 - (double) getCurrentUnixtime
 {
@@ -396,8 +393,15 @@ bool userActiveState;
     return [now timeIntervalSince1970];
 }
 
+
 /**
- * ウィンドウでのデバッグメッセージの表示
+ * ====================================
+ *  For Debug
+ * ====================================
+ */
+
+/**
+ * Show debug messages on the main window
  */
 - (void) addDebugMessageField:(NSString *)message
 {
@@ -407,8 +411,86 @@ bool userActiveState;
     //[self.logTextField scrollLineDown:nil];
 }
 
-//-(void)logMessageToLogView:(NSString*)message {
-//    [logView setString: [ [logView string] stringByAppendingFormat:@"%@: %@\n", [self.logDateFormatter stringFromDate:[NSDate date]],  message]];
-//}
+
+/**
+ * ====================================
+ *  Useful Method
+ * ====================================
+ */
+- (void) getCurrentActiveApplication
+{
+    NSWorkspace* ws = [NSWorkspace sharedWorkspace];
+    NSLog(@"%@", [ws activeApplication]);
+}
+
+
+
+/**
+ * ====================================
+ *  For Test
+ * ====================================
+ */
+- (void) getActiveApplicationFromMenubar
+{
+    NSWorkspace* ws = [NSWorkspace sharedWorkspace];
+    NSLog(@"%@", [ws launchedApplications]);
+}
+
+
+- (void) showLog
+{
+    // own process name
+    ProcessSerialNumber ourPSN;
+    GetCurrentProcess(&ourPSN);
+    
+    // Show all current process name
+    ProcessSerialNumber nextPSN = {kNoProcess, kNoProcess}; // initialization
+    while (GetNextProcess(&nextPSN) == noErr)
+    {
+        Boolean processIsUs = false;
+        SameProcess(&ourPSN, &nextPSN, &processIsUs);
+        if (processIsUs)
+        {
+            // This is own process name
+        }
+        else
+        {
+            CFDictionaryRef info;
+            info = ProcessInformationCopyDictionary(&nextPSN, kProcessDictionaryIncludeAllInformationMask);
+            if (info)
+            {
+                //                NSLog(@"PSN:%@", CFDictionaryGetValue(info, CFSTR("PSN")));
+                //                NSLog(@"Flavor:%@", CFDictionaryGetValue(info, CFSTR("Flavor")));
+                //                NSLog(@"Attributes:%@", CFDictionaryGetValue(info, CFSTR("Attributes")));
+                //                NSLog(@"ParentPSN:%@", CFDictionaryGetValue(info, CFSTR("ParentPSN")));
+                //                NSLog(@"FileType:%@", CFDictionaryGetValue(info, CFSTR("FileType")));
+                //                NSLog(@"FileCreator:%@", CFDictionaryGetValue(info, CFSTR("FileCreator")));
+                //                NSLog(@"pid:%@", CFDictionaryGetValue(info, CFSTR("pid")));
+                //                NSLog(@"LSBackgroundOnly:%@", CFDictionaryGetValue(info, CFSTR("LSBackgroundOnly")));
+                //                NSLog(@"LSUIElement:%@", CFDictionaryGetValue(info, CFSTR("LSUIElement")));
+                //                NSLog(@"IsHiddenAttr:%@", CFDictionaryGetValue(info, CFSTR("IsHiddenAttr")));
+                //                NSLog(@"IsCheckedInAttr:%@", CFDictionaryGetValue(info, CFSTR("IsCheckedInAttr")));
+                //                NSLog(@"RequiresCarbon:%@", CFDictionaryGetValue(info, CFSTR("RequiresCarbon")));
+                //                NSLog(@"LSUserQuitOnly:%@", CFDictionaryGetValue(info, CFSTR("LSUserQuitOnly")));
+                //                NSLog(@"LSUIPresentationMode:%@", CFDictionaryGetValue(info, CFSTR("LSUIPresentationMode")));
+                //                NSLog(@"BundlePath:%@", CFDictionaryGetValue(info, CFSTR("BundlePath")));
+                //                NSLog(@"kCFBundleExecutableKey:%@", CFDictionaryGetValue(info, kCFBundleExecutableKey));
+                //                NSLog(@"kCFBundleNameKey:%@", CFDictionaryGetValue(info, kCFBundleNameKey));
+                //                NSLog(@"kCFBundleIdentifierKey:%@", CFDictionaryGetValue(info, kCFBundleIdentifierKey));
+                CFRelease(info);
+            }
+            
+            // show process names
+            CFStringRef name;
+            if (CopyProcessName(&nextPSN, &name) == noErr)
+            {
+                NSLog(@"name:%@", name);
+                CFRelease(name);
+            }
+        }
+    }
+}
+
+
 
 @end
