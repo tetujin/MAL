@@ -1,7 +1,8 @@
 # MAL
 
 ## What is MAL?
-MAL is an application logger for Mac OS X. This application detects following actions by each second: current using application, mouse and keybord, and PC's active state (ON/OFF). Also, each detected action was saved to log files. If you will modify source code, you can upload thoese actions to the server. 
+**MAL** is an application logger for Mac OS X. 
+This application detects following actions: __current using application__, __mouse and Keyboard__, and __PC's active state (ON/OFF)__. Also, each detected action was saved to log files. If you will modify source code, you can upload those actions to the server. 
 
 ## License
 The MIT License (MIT)
