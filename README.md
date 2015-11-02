@@ -2,7 +2,7 @@
 
 ## Overview
 **MAL** is an application logger for Mac OS X. 
-This application detects following actions: _current using application_, _mouse and keyboard_, and _PC's active state (ON/OFF)_. Also, each detected action was saved to log files. If you will modify source code, you can upload those actions to the server. 
+This application detects following actions: _current using application_, _mouse and keyboard_, and _PC's active state (ON/OFF)_. Also, each detected action was saved to log files. If you will customize source code, you can upload those actions to the server. 
 
 ## How to use MAL.app ?
 - Download the source file from "Download ZIP" button.
@@ -22,7 +22,7 @@ $ tail -f ~/.mal.app.log
 ```
 
 
-## How to modify MAL.app ?
+## How to customize MAL.app ?
 ... coming soon
 
 
