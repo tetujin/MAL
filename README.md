@@ -18,7 +18,7 @@ This application detects following actions: _current using application_, _mouse 
 
 - You can check MAL's action by using a following command.
 ```
-$ tail -f ~/.mal.log
+$ tail -f ~/.mal.app.log
 ```
 
 
