@@ -2,21 +2,23 @@
 
 ## Overview
 **MAL** is an application logger for Mac OS X. 
-This application detects following actions: _current using application_, _mouse and keyboard_, and _PC's active state (ON/OFF)_. Also, each detected action was saved to log files. If you will customize source code, you can upload those actions to the server. 
+This application can detect following actions: _current using application_, _mouse and keyboard_, and _PC's active state (ON/OFF)_. Also, each detected actions are saved as a CSV file at user's home directory. If you will customize source code, you can upload those actions to the server. 
 
 ## How to use MAL.app ?
 - Download the source file from "Download ZIP" button.
-- Double click `MAL.app` in the file, an application window will be popup. (If the window is not popup, you should check security of App from `System Preferences -> Security&Privacy -> General`.)
-- Detected actions were save to each log file, with timestamp (unixtime).
+- Open `MAL.app` in the file by double click, and then an application window will be appeared. 
+-- If the window is not aooeared, you should check a security setting of your computer (from `System Preferences -> Security&Privacy -> General`.)
+-- If you want to detect keyboard actions, you have to permit access to the keyboard API (from `System Preferences -> Security&Privacy -> Privacy -> Accessibility -> "Check MAL.zpp"`.)
+- Detected actions are saved as CSV files, with timestamp (unixtime).
 
 |Type of Actions|File Name (Defulat)|
 |---|---|
-|PC's active state|~/.mal.log|
-|Current using application|~/.mal.app.log|
-|Keyboard action|~/.mal.key.log|
-|Mouse action|~/.mal.mouse.log|
+|PC's active state|~/mal-pcstate.csv|
+|Current using application|~/mal-app.csv|
+|Keyboard action|~/mal-key.log|
+|Mouse action|~/mal-mouse.log|
 
-- You can check MAL's action by using a following command.
+- You can check MAL's action using a following command.
 ```
 $ tail -f ~/.mal.app.log
 ```

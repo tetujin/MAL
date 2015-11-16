@@ -65,10 +65,11 @@ bool userActiveState;
     userNameKey = @"username";
     changeStateInterval = 5.0f;
     sendActionLogInterval = 1.0f * 10.0f;
-    logFile = @".mal.log";
-    activeAppLogFile = @".mal.app.log";
-    keybordActionLogFile = @".mal.key.log";
-    mouseActionLogFile = @".mal.mouse.log";
+    logFile = @"mal-pcstate.csv";
+    activeAppLogFile = @"mal-app.csv";
+    keybordActionLogFile = @"mal-key.csv";
+    mouseActionLogFile = @"mal-mouse.csv";
+//    mouseActionLogFile = @"mal-mouse-location.csv";
     serverURL = @"http://www.hoge.com";
     pastActiveApp = @"";
     pastMouseLocation = [NSEvent mouseLocation];
@@ -160,24 +161,25 @@ bool userActiveState;
 - (void) startMonitoring
 {
     self.loggingEnabled = true;
+    double now = [self getCurrentUnixtime];
     monitorKeyDown = [NSEvent addGlobalMonitorForEventsMatchingMask:NSKeyDownMask handler:^(NSEvent *evt) {
 //        [self logMessageToLogView:[NSString stringWithFormat:@"Key down: %@ (key code %d)", [evt characters], [evt keyCode]]];
         self.keyPressCounter = [NSNumber numberWithInt:(1 + [self.keyPressCounter intValue])];
         lastUpdateTime = [self getCurrentUnixtime];
-        [self saveLogToFile:[NSString stringWithFormat:@"%d\n", [evt keyCode]] targetFile:keybordActionLogFile];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f,%d\n", now, [evt keyCode]] targetFile:keybordActionLogFile];
     }];
     monitorLeftMouseDown = [NSEvent addGlobalMonitorForEventsMatchingMask:NSLeftMouseDownMask handler:^(NSEvent *evt) {
         //[self logMessageToLogView:[NSString stringWithFormat:@"Left mouse down!"]];
         self.leftMouseCounter = [NSNumber numberWithInt:(1 + [self.leftMouseCounter intValue])];
         lastUpdateTime = [self getCurrentUnixtime];
-        [self saveLogToFile:[NSString stringWithFormat:@"%f,Left Mouse Down\n", [self getCurrentUnixtime]] targetFile:mouseActionLogFile];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f, %f,Left Mouse Down\n", now, [self getCurrentUnixtime]] targetFile:mouseActionLogFile];
         
     }];
     monitorRightMouseDown = [NSEvent addGlobalMonitorForEventsMatchingMask:NSRightMouseDownMask handler:^(NSEvent *evt) {
         //[self logMessageToLogView:@"Right mouse down!"];
         self.rightMouseCounter = [NSNumber numberWithInt:(1 + [self.rightMouseCounter intValue])];
         lastUpdateTime = [self getCurrentUnixtime];
-        [self saveLogToFile:[NSString stringWithFormat:@"%f,Right Mouse Down\n", [self getCurrentUnixtime]] targetFile:mouseActionLogFile];
+        [self saveLogToFile:[NSString stringWithFormat:@"%f, %f,Right Mouse Down\n", now, [self getCurrentUnixtime]] targetFile:mouseActionLogFile];
     }];
 }
 
