@@ -15,12 +15,12 @@ This application can detect following actions: _current using application_, _mou
 |---|---|
 |PC's active state|~/mal-pcstate.csv|
 |Current using application|~/mal-app.csv|
-|Keyboard action|~/mal-key.log|
-|Mouse action|~/mal-mouse.log|
+|Keyboard action|~/mal-key.csv|
+|Mouse action|~/mal-mouse.csv|
 
 - You can check MAL's action using a following command.
 ```
-$ tail -f ~/.mal.app.log
+$ tail -f ~/mal-app.csv
 ```
 
 
