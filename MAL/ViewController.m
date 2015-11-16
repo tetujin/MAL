@@ -69,7 +69,7 @@ bool userActiveState;
     activeAppLogFile = @".mal.app.log";
     keybordActionLogFile = @".mal.key.log";
     mouseActionLogFile = @".mal.mouse.log";
-//    serverURL = @"http://www.ht.sfc.keio.ac.jp/~tetujin/";
+    serverURL = @"http://www.hoge.com";
     pastActiveApp = @"";
     pastMouseLocation = [NSEvent mouseLocation];
     [self startMonitoring];
