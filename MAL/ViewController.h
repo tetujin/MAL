@@ -14,6 +14,7 @@ static id monitorRightMouseDown;
 static id monitorKeyDown;
 
 @interface ViewController : NSViewController <NSApplicationDelegate>
+@property (weak) IBOutlet NSTextField *currentApp;
 
 @property (readwrite) NSDateFormatter *logDateFormatter;
 @property (readwrite) NSNumber *keyPressCounter;

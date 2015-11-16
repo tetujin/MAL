@@ -69,7 +69,7 @@ bool userActiveState;
     activeAppLogFile = @".mal.app.log";
     keybordActionLogFile = @".mal.key.log";
     mouseActionLogFile = @".mal.mouse.log";
-    serverURL = @"http://www.ht.sfc.keio.ac.jp/~tetujin/";
+//    serverURL = @"http://www.ht.sfc.keio.ac.jp/~tetujin/";
     pastActiveApp = @"";
     pastMouseLocation = [NSEvent mouseLocation];
     [self startMonitoring];
@@ -125,6 +125,7 @@ bool userActiveState;
                  targetFile:activeAppLogFile];
         NSLog(@"%@", currentActiveApp );
         pastActiveApp = currentActiveApp;
+        [_currentApp setStringValue:currentActiveApp];
     }
 }
 
@@ -405,10 +406,7 @@ bool userActiveState;
  */
 - (void) addDebugMessageField:(NSString *)message
 {
-//    NSMutableString *mString = [[NSMutableString alloc] initWithString:[self.logTextField string]];
-//    [mString appendString:message];
     [self.logTextField setString:message];
-    //[self.logTextField scrollLineDown:nil];
 }
 
 
